@@ -34,6 +34,11 @@ typedef void TKeyStatusHandlerRaw (unsigned char	ucModifiers,	// see usbhid.h
 typedef void TKeyStatusHandlerRawEx (unsigned char	ucModifiers,	// see usbhid.h
 				   const unsigned char	RawKeys[6], void* arg);	// key code or 0 in each byte
 
+// The report filter is called with a writable copy of each keyboard report (USBKEYB_REPORT_SIZE bytes,
+// without report ID), before it is handed to the raw handler and to the cooked mode processing.
+// It may modify the report (e.g. to remap keys). It is called in interrupt context.
+typedef void TKeyboardReportFilter (u8 *pReport, void *pArg);
+
 class CUSBKeyboardDevice : public CUSBHIDDevice
 {
 public:
@@ -59,6 +64,9 @@ public:
 					  boolean bMixedMode = FALSE);
 	void UnregisterKeyStatusHandlerRaw (void);
 
+	// works in cooked and raw mode (pFilter = 0 to unregister)
+	void RegisterReportFilter (TKeyboardReportFilter *pFilter, void *pArg = 0);
+
 	// works in cooked and raw mode
 	boolean SetLEDs (u8 ucStatus);		// must not be called in interrupt context
 
@@ -75,6 +83,9 @@ private:
 	TKeyStatusHandlerRawEx *m_pKeyStatusHandlerRaw;
 	void* m_pKeyStatusHandlerRawArg;
 	boolean m_bMixedMode;
+
+	TKeyboardReportFilter *m_pReportFilter;
+	void *m_pReportFilterArg;
 
 	u8 m_LastReport[USBKEYB_REPORT_SIZE];
 

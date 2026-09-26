@@ -37,6 +37,8 @@ CUSBKeyboardDevice::CUSBKeyboardDevice (CUSBFunction *pFunction)
 	m_pKeyStatusHandlerRaw (0),
 	m_pKeyStatusHandlerRawArg (0),
 	m_bMixedMode (FALSE),
+	m_pReportFilter (0),
+	m_pReportFilterArg (0),
 	m_ucLastLEDStatus (0),
 	m_nDeviceNumber (0)		// not assigned
 {
@@ -166,6 +168,12 @@ void CUSBKeyboardDevice::UnregisterKeyStatusHandlerRaw (void)
 	m_pKeyStatusHandlerRawArg = 0;
 }
 
+void CUSBKeyboardDevice::RegisterReportFilter (TKeyboardReportFilter *pFilter, void *pArg)
+{
+	m_pReportFilterArg = pArg;
+	m_pReportFilter = pFilter;
+}
+
 boolean CUSBKeyboardDevice::SetLEDs (u8 ucStatus)
 {
 	DMA_BUFFER (u8, Buffer, 1) = {ucStatus};
@@ -195,6 +203,14 @@ void CUSBKeyboardDevice::ReportHandler (const u8 *pReport, unsigned nReportSize)
 	    || nReportSize != USBKEYB_REPORT_SIZE)
 	{
 		return;
+	}
+
+	u8 FilteredReport[USBKEYB_REPORT_SIZE];
+	if (m_pReportFilter != 0)
+	{
+		memcpy (FilteredReport, pReport, sizeof FilteredReport);
+		(*m_pReportFilter) (FilteredReport, m_pReportFilterArg);
+		pReport = FilteredReport;
 	}
 
 	if (m_pKeyStatusHandlerRaw != 0)
